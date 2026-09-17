@@ -1,0 +1,18 @@
+# Build output
+bin/
+obj/
+bin3/
+publish/
+artifacts/
+*.user
+*.suo
+.vs/
+.idea/
+
+# Legacy build inputs that are not redistributed here
+legacy/SoundVolumeView.exe
+legacy/bin/
+legacy/obj/
+
+# Local tooling
+*.log

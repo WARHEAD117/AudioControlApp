@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Resources\app.ico</ApplicationIcon>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <ApplicationUseCompatibleTextRendering>false</ApplicationUseCompatibleTextRendering>
+    <ApplicationVisualStyles>true</ApplicationVisualStyles>
+    <AssemblyName>AudioControlApp</AssemblyName>
+    <RootNamespace>AudioControlApp</RootNamespace>
+    <Version>2.0.0</Version>
+    <Authors>WARHEAD117</Authors>
+    <Product>AudioControlApp</Product>
+    <Description>Tray utility that switches the Windows speaker layout (2.0 / 5.1 / 7.1) and does it automatically per application.</Description>
+    <Copyright>Copyright (c) 2026 WARHEAD117</Copyright>
+    <RepositoryUrl>https://github.com/WARHEAD117/AudioControlApp</RepositoryUrl>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <Platforms>AnyCPU</Platforms>
+    <RuntimeIdentifiers>win-x64;win-x86;win-arm64</RuntimeIdentifiers>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NAudio.Wasapi" Version="2.2.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Resources\app.ico" />
+  </ItemGroup>
+
+</Project>
