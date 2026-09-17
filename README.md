@@ -35,8 +35,8 @@ device, and switches it automatically depending on which program is running. Eng
 
 ## 運作原理
 
-舊版（見 [`legacy/`](legacy/README.md)）透過 NirSoft SoundVolumeView 直接改寫登錄檔，再重啟 `Audiosrv`
-服務，因此必須以管理員身分執行，也無法正常隨開機啟動。
+舊版（見 [`legacy/`](legacy/README.md)）呼叫 NirSoft SoundVolumeView 改寫喇叭配置，再重啟 `Audiosrv`
+服務讓變更生效。重啟服務需要管理員權限，而舊版以一般權限執行時這一步會靜默失敗。
 
 新版改用 Windows 音效控制台（mmsys.cpl）本身所使用的 COM 介面 `IPolicyConfig`：
 
@@ -57,9 +57,72 @@ device, and switches it automatically depending on which program is running. Eng
    - **一般**：選擇輸出裝置、左鍵快速切換的兩種配置、快速鍵、開機啟動。
    - **自動切換**：新增規則（可從執行中的程式清單挑選），設定沒有規則符合時的後備配置。
    - **配置**：勾選要出現在選單中的配置；「檢測裝置支援情況」會標出裝置實際接受的配置。
-3. 在 exe 旁邊放一個名為 `portable` 的空檔案即可改為可攜模式（設定與記錄存放在程式資料夾）。
+3. 建議把 exe 放在固定的位置，例如 `%LocalAppData%\Programs\AudioControlApp\`，再勾選開機啟動。
 
-設定檔：`%AppData%\AudioControlApp\settings.json`；記錄檔：`%LocalAppData%\AudioControlApp\app.log`。
+## 設定與資料存放位置
+
+設定和記錄檔存在使用者目錄，與 exe 放在哪裡無關：
+
+| 內容 | 位置 |
+|---|---|
+| 設定 | `%AppData%\AudioControlApp\settings.json` |
+| 記錄檔 | `%LocalAppData%\AudioControlApp\app.log`（超過 1 MB 時改名為 `app.log.old` 後重新開始） |
+| 開機啟動 | 登錄檔 `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` 下名為 `AudioControlApp` 的值 |
+
+設定視窗「一般」分頁底部有「開啟記錄資料夾」和「開啟設定資料夾」的連結。
+
+### 可攜模式
+
+在 exe 旁邊放一個名為 `portable` 的空檔案（沒有副檔名），`settings.json` 和 `app.log` 就會改存在 exe 所在的資料夾。
+開機啟動仍然寫在登錄檔裡。
+
+### settings.json 欄位
+
+一般透過設定視窗修改即可。如果要手動編輯，請先退出程式：設定只在啟動時讀取，程式執行中儲存時會覆蓋手動的修改。
+檔案格式錯誤時程式會改用預設值。
+
+| 欄位 | 說明 |
+|---|---|
+| `Language` | `auto`、`en`、`zh-Hans`、`zh-Hant` |
+| `DeviceId` / `DeviceName` | 要控制的裝置；`null` 表示跟隨 Windows 預設輸出裝置 |
+| `MenuLayouts` | 出現在托盤選單中的配置（聲道遮罩，十進位） |
+| `QuickToggleA` / `QuickToggleB` | 左鍵單擊和快速鍵在其間切換的兩種配置 |
+| `LeftClickToggles` | `true` 時左鍵單擊切換配置，`false` 時開啟設定視窗 |
+| `NotifyOnSwitch` | 切換時是否顯示通知 |
+| `AutoSwitchEnabled` | 是否啟用自動切換 |
+| `Rules` | 自動切換規則，由上而下比對：`Enabled`、`ProcessName`、`Trigger`（`Running` / `Foreground`）、`Layout`、`Comment` |
+| `FallbackLayout` | 沒有規則符合時套用的配置；`null` 表示不做任何動作 |
+| `PollIntervalMs` | 檢查程式清單的間隔（毫秒，500–60000） |
+| `ToggleHotkey` | 全域快速鍵，例如 `"Ctrl+Alt+S"`；`null` 表示不使用 |
+| `LogEnabled` | 是否寫入記錄檔 |
+
+常用的聲道遮罩：
+
+| 配置 | 十六進位 | 十進位 |
+|---|---|---|
+| 2.0 | `0x3` | `3` |
+| 4.0 | `0x33` | `51` |
+| 5.1 | `0x3F` | `63` |
+| 5.1（側置喇叭） | `0x60F` | `1551` |
+| 7.1 | `0x63F` | `1599` |
+
+### 移動 exe 的位置
+
+設定不受影響，但開機啟動記錄的是 exe 的完整路徑，移動後開機時會找不到程式。
+從新位置啟動程式後，「開機啟動」會顯示為未勾選，設定視窗會提示記錄指向其他位置；重新勾選一次即可改寫成新路徑。
+
+注意不要直接從建置輸出資料夾（例如 `publish\`）設定開機啟動：重新建置會覆蓋 exe，而程式執行中時覆蓋會失敗。
+
+### 解除安裝
+
+1. 在托盤選單取消勾選「開機啟動」，然後選「退出」。
+2. 刪除 exe 所在的資料夾，以及 `%AppData%\AudioControlApp` 和 `%LocalAppData%\AudioControlApp`。
+
+### 從舊版（v1）升級
+
+舊版的開機啟動使用同一個登錄值名稱 `AudioControlApp`，所以在新版勾選開機啟動時會直接取代舊版的記錄。
+升級前請先從工作管理員結束舊版（舊版沒有退出選單）。兩個版本不會互相阻止同時執行，同時執行會出現兩個托盤圖示並互相覆蓋配置；
+舊版在取消勾選開機啟動時也會刪除新版的記錄。
 
 ### 命令列
 
@@ -121,17 +184,37 @@ what this tool does.
 
 ### How it works
 
-The previous version drove NirSoft SoundVolumeView to edit the registry and then restarted the Windows
-Audio service, which required elevation and made autostart unreliable. This version uses the undocumented
+The previous version drove NirSoft SoundVolumeView and then restarted the Windows Audio service so the
+change would take effect. Restarting the service needs administrator rights, and without them that step
+failed silently. This version uses the undocumented
 `IPolicyConfig` COM interface, the same one the Sound control panel uses: `SetPropertyValue` updates
 `PKEY_AudioEndpoint_PhysicalSpeakers` / `FullRangeSpeakers`, and `SetDeviceFormat` re-applies the endpoint
 format with the new channel mask. Both run as the current user and take effect immediately.
 
 ### Usage
 
-Requires the .NET 8 Desktop Runtime (or use the self-contained build). Unzip, run `AudioControlApp.exe`,
-right-click the tray icon → *Settings…*. Put an empty file named `portable` next to the executable to keep
-settings and logs in the application folder.
+Requires the .NET 8 Desktop Runtime (or use the self-contained build). Unzip to a permanent folder such as
+`%LocalAppData%\Programs\AudioControlApp\`, run `AudioControlApp.exe`, right-click the tray icon → *Settings…*.
+
+### Where data is stored
+
+| What | Where |
+|---|---|
+| Settings | `%AppData%\AudioControlApp\settings.json` |
+| Log | `%LocalAppData%\AudioControlApp\app.log` (rotated to `app.log.old` above 1 MB) |
+| Start with Windows | value `AudioControlApp` under `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` |
+
+- **Portable mode.** An empty file named `portable` next to the executable moves `settings.json` and
+  `app.log` into the application folder. The startup entry still lives in the registry.
+- **Editing settings.json by hand.** Exit the app first. Settings are read only at startup and the running
+  app overwrites the file when it saves. The fields are described in the Chinese section above.
+- **Moving the executable.** Settings are unaffected, but the startup entry stores the full path. After
+  starting the app from its new location, tick *Start with Windows* again to rewrite the path.
+- **Uninstalling.** Untick *Start with Windows*, exit, then delete the application folder,
+  `%AppData%\AudioControlApp` and `%LocalAppData%\AudioControlApp`.
+- **Upgrading from v1.** v1 used the same Run value name, so enabling startup in v2 replaces it. End v1
+  in Task Manager first, since it has no exit command. The two versions do not block each other, and
+  unticking startup in v1 deletes v2's entry.
 
 ```
 AudioControlApp.exe --set 5.1 | 2.0 | 5.1side | 7.1 | 0x<mask>
